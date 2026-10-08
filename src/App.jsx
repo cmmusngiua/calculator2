@@ -30,7 +30,7 @@ function formatResult(value) {
 function CalcDisplay({ dispValue }) {
   return (
     <div className="Display" role="status" aria-live="polite" aria-label="Calculator display">
-      <span>{dispValue}</span>
+      <span className="Display-value">{dispValue}</span>
     </div>
   );
 }
@@ -50,6 +50,7 @@ function CalcButton({ buttonLabel, onClick, className = '', ariaLabel }) {
 
 function App() {
   const [dispValue, setDispValue] = useState('0');
+  const [currentValue, setCurrentValue] = useState('0');
   const [storedValue, setStoredValue] = useState(null);
   const [pendingOperator, setPendingOperator] = useState(null);
   const [waitingForOperand, setWaitingForOperand] = useState(false);
@@ -57,6 +58,7 @@ function App() {
   const buttonClickHandler = (label) => {
     if (label === 'C') {
       setDispValue('0');
+      setCurrentValue('0');
       setStoredValue(null);
       setPendingOperator(null);
       setWaitingForOperand(false);
@@ -64,24 +66,23 @@ function App() {
     }
 
     if (/^\d$/.test(label)) {
-      setDispValue((current) => {
-        if (waitingForOperand || current === 'Error' || !Number.isFinite(Number(current))) {
-          return label;
-        }
-
+      setCurrentValue((current) => {
+        if (waitingForOperand || current === 'Error' || !Number.isFinite(Number(current))) return label;
         return current === '0' ? label : current + label;
       });
+      setDispValue(label);
       setWaitingForOperand(false);
       return;
     }
 
     if (['÷', '*', '-', '+'].includes(label)) {
-      const currentValue = Number(dispValue);
+      const numericValue = Number(currentValue);
       const value = pendingOperator && !waitingForOperand
-        ? calculate(storedValue, currentValue, pendingOperator)
-        : (Number.isFinite(currentValue) ? currentValue : 0);
+        ? calculate(storedValue, numericValue, pendingOperator)
+        : (Number.isFinite(numericValue) ? numericValue : 0);
 
-      setDispValue(formatResult(value));
+      setDispValue(label);
+      setCurrentValue(formatResult(value));
       setStoredValue(value === null || !Number.isFinite(value) ? null : value);
       setPendingOperator(value === null || !Number.isFinite(value) ? null : label);
       setWaitingForOperand(true);
@@ -89,8 +90,10 @@ function App() {
     }
 
     if (label === '=' && pendingOperator && !waitingForOperand) {
-      const result = calculate(storedValue, Number(dispValue), pendingOperator);
-      setDispValue(formatResult(result));
+      const result = calculate(storedValue, Number(currentValue), pendingOperator);
+      const formattedResult = formatResult(result);
+      setDispValue(formattedResult);
+      setCurrentValue(formattedResult);
       setStoredValue(null);
       setPendingOperator(null);
       setWaitingForOperand(true);
@@ -100,13 +103,14 @@ function App() {
   return (
     <div className="App">
       <header className="Header">
-        <p className="eyebrow">A little math, made personal</p>
-        <h1>Calculator of {FULL_NAME} - WMD - 3A</h1>
+        <h1>Calculator of {FULL_NAME} WMB - 3A</h1>
       </header>
       <main className="calculator" aria-label="Calculator">
-        <CalcDisplay dispValue={dispValue} />
+        <CalcDisplay
+          dispValue={dispValue}
+        />
         <div className="Keypad">
-          {['C', '÷', '7', '8', '9', '*', '4', '5', '6', '-', '1', '2', '3', '+', '0', '='].map((label) => (
+          {['7', '8', '9', '÷', '4', '5', '6', '*', '1', '2', '3', '-', 'C', '0', '=', '+'].map((label) => (
             <CalcButton
               key={label}
               buttonLabel={label}
@@ -120,11 +124,11 @@ function App() {
           ))}
         </div>
         <div className="Signature">
-          <span className="signature-label">Made by</span>
           <CalcButton
             buttonLabel={SURNAME}
             onClick={() => {
               setDispValue(FULL_NAME);
+              setCurrentValue('0');
               setStoredValue(null);
               setPendingOperator(null);
               setWaitingForOperand(true);
@@ -134,7 +138,6 @@ function App() {
           />
         </div>
       </main>
-      <footer className="Footer">Simple numbers. A little bit of sage.</footer>
     </div>
   );
 }
